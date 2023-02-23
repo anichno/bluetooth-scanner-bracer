@@ -1,3 +1,7 @@
 .obsidian/themes
 .obsidian/appearance.json
 .obsidian/workspace.json
+.vagrant/
+.embuild/
+/target
+/Cargo.lock
