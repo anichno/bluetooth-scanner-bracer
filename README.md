@@ -1,10 +1,15 @@
 # Docs
-[Design Overview](Design%20Overview.md)
-[System Architecture](System%20Architecture.md)
-[Part List](Part%20List.md)
-[Milestones](Milestones.md)
-[Library Selection](Library%20Selection.md)
-[Links](Links.md)
+[Design Overview](docs/Design%20Overview.md)
+
+[System Architecture](docs/System%20Architecture.md)
+
+[Part List](docs/Part%20List.md)
+
+[Milestones](docs/Milestones.md)
+
+[Library Selection](docs/Library%20Selection.md)
+
+[Links](docs/Links.md)
 
 # Setup
 - Setup vagrant (Virtualbox Provider)
