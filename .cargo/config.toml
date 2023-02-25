@@ -1,10 +1,9 @@
 [build]
 # Uncomment the relevant target for your chip here (ESP32, ESP32-S2, ESP32-S3 or ESP32-C3)
-#target = "xtensa-esp32-espidf"
+# target = "xtensa-esp32-espidf"
 #target = "xtensa-esp32s2-espidf"
 target = "xtensa-esp32s3-espidf"
 #target = "riscv32imc-esp-espidf"
-target-dir = "/home/vagrant/target"
 
 [target.xtensa-esp32-espidf]
 linker = "ldproxy"
@@ -18,7 +17,7 @@ runner = "espflash --monitor"
 
 [target.xtensa-esp32s3-espidf]
 linker = "ldproxy"
-runner = "espflash --monitor /dev/ttyUSB0"
+runner = "espflash flash -s 16mb --monitor --port /dev/ttyUSB0"
 #rustflags = ["--cfg", "espidf_time64"] # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
 
 [target.riscv32imc-esp-espidf]
@@ -36,6 +35,7 @@ build-std = ["std", "panic_abort"]
 [env]
 # Note: these variables are not used when using pio builder (`cargo build --features pio`)
 # Builds against ESP-IDF stable (v4.4)
-ESP_IDF_VERSION = "release/v4.4"
+# ESP_IDF_VERSION = "release/v4.4"
+ESP_IDF_VERSION = { value = "tag:v4.4.2" }
 # Builds against ESP-IDF master (mainline)
 #ESP_IDF_VERSION = "master"
