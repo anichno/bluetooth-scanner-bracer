@@ -9,3 +9,8 @@ Signal strength bars will be vertically expanded to use up "most" of the availab
 If the device sees a "paired" device, it will use its saved color, but position its signal strength bar at a known fixed location. It will then ping that device at an increased rate to improve its update resolution.
 
 If scan resolution is slow, device will attempt to interpolate results such that the bars always expand and reposition in a smooth fashion. All updates will use a "fade" transition.
+
+# Controls
+- 2 buttons for brightness controls
+- button to reset ignore list
+- switch for signal strength ordering
