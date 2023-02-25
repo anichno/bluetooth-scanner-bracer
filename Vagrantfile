@@ -3,6 +3,9 @@ Vagrant.configure("2") do |config|
 
   config.vm.network "private_network", ip: "192.168.33.10"
 
+  config.ssh.private_key_path = ['~/.vagrant.d/insecure_private_key', '.vagrant/machines/default/virtualbox/private_key', '~/.ssh/id_rsa']
+  config.ssh.forward_agent = true
+
   config.vm.provider "virtualbox" do |vb|
     # vb.gui = true
     vb.memory = 4096
@@ -31,12 +34,14 @@ Vagrant.configure("2") do |config|
     cargo install espup
     espup install
     echo '. $HOME/export-esp.sh' >> $HOME/.bashrc
-    cargo install cargo-espflash
-    cargo install espflash
+    cargo install --version 2.0.0-rc.3 cargo-espflash
+    cargo install --version 2.0.0-rc.3 espflash
     cargo install cargo-espmonitor
     cargo install espmonitor
     cargo install cargo-generate
     cargo install ldproxy
+    mkdir /home/vagrant/project
+    cp -r /vagrant/. /home/vagrant/project
   SHELL
 
   config.vm.provision 'shell', reboot: true
