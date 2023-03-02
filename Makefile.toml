@@ -18,3 +18,10 @@ args = ["build", "--release"]
 [tasks.build_and_flash]
 command = "cargo"
 args = ["run", "--release"]
+
+
+
+[tasks.build_merged_firmware]
+dependencies = ["simulate"]
+command = "espflash"
+args = ["save-image", "--merge", "--chip", "esp32", "firmware.bin", "target/xtensa-esp32-espidf/release/bluetooth-scanner-bracer"]

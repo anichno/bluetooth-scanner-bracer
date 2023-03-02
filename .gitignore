@@ -6,3 +6,6 @@
 /target
 /Cargo.lock
 .env
+*.bin
+.vscode/launch.json
+.vscode/settings.json
