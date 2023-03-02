@@ -8,7 +8,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.provider "virtualbox" do |vb|
     # vb.gui = true
-    vb.memory = 4096
+    vb.memory = 8192
     vb.cpus = 4
     vb.customize ["modifyvm", :id, "--usb", "on"]
     vb.customize ["modifyvm", :id, "--usbehci", "on"]
@@ -19,11 +19,11 @@ Vagrant.configure("2") do |config|
     "--name", "esp32 usb serial",
     "--productid", "ea60",
     "--vendorid", "10c4"]
-
-    # Add filter for ESP32-S3 JTAG
+	
+	# Add filter for ESP32-S3 JTAG
     vb.customize ["usbfilter", "add", "0",
     "--target", :id,
-    "--name", "esp32 usb serial",
+    "--name", "esp32 jtag",
     "--productid", "1001",
     "--vendorid", "303A"]
   end
@@ -47,6 +47,8 @@ Vagrant.configure("2") do |config|
     cargo install espmonitor
     cargo install cargo-generate
     cargo install ldproxy
+	cargo install https
+	cargo install cargo-make
     mkdir /home/vagrant/project
     cp -r /vagrant/. /home/vagrant/project
   SHELL

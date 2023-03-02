@@ -23,3 +23,11 @@
 - Connect with VS Code, [remote-ssh](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) plugin
 - Workspace will be in `/home/vagrant/project`
 - Connect ESP32-S3-DevKitC, it should be auto-captured by Virtualbox
+
+# Simulation
+- Setup Wokwi VS Code Extension: https://docs.wokwi.com/vscode/getting-started
+- Run 
+	```bash
+	makers simulate
+	```
+- `F1` -> Wokwi: Start Simulator

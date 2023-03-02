@@ -4,4 +4,5 @@
 - [esp32 Book](https://esp-rs.github.io/book/introduction.html)
 - [Battery Life Calculator](https://www.digikey.com/en/resources/conversion-calculators/conversion-calculator-battery-life)
 - [ESP32-S3-DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html)
-- 
+- https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig.html
+- https://github.com/cat-in-136/ws2812-esp32-rmt-driver/blob/main/examples/m5atom_smart_leds.rs

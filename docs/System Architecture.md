@@ -7,3 +7,8 @@ flowchart LR
 	bat --> micro
 	pos[Position Strategy Switch] --> micro
 ```
+
+# Tasks
+- scan for devices
+- check for inputs
+- update lights

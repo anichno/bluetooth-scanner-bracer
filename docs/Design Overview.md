@@ -12,5 +12,5 @@ If scan resolution is slow, device will attempt to interpolate results such that
 
 # Controls
 - 2 buttons for brightness controls
-- button to reset ignore list
 - switch for signal strength ordering
+
