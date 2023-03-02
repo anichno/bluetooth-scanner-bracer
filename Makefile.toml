@@ -1,0 +1,20 @@
+[tasks.simulate]
+command = "cargo"
+args = ["build", "--release", "--target", "xtensa-esp32-espidf", "--features", "simulator"]
+
+[tasks.simulate_test]
+script = '''
+A=`cargo test --no-run --release --target xtensa-esp32-espidf --features simulator 2>&1 | tail -1 | cut -d '(' -f 2 | cut -d ')' -f1`
+mv wokwi.toml wokwi.toml.bak
+echo "[wokwi]\nversion = 1\nfirmware = \"$A\"\nelf = \"$A\"\n" > wokwi.toml
+bash -c 'read -p "Press enter to continue and fix up wokwi.toml"'
+mv wokwi.toml.bak wokwi.toml
+'''
+
+[tasks.build]
+command = "cargo"
+args = ["build", "--release"]
+
+[tasks.build_and_flash]
+command = "cargo"
+args = ["run", "--release"]

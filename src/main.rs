@@ -1,6 +1,25 @@
-use esp32_nimble::BLEDevice;
+//! Runtime tasks:
+//! - BLE scan
+//! - LED control
+//! - BLE decay
+//! - Input monitor
+//! - TODO: interpolate device signal strength
+//!
+//! TODO: Remove floating point math
+
+#![warn(clippy::disallowed_macros)]
+
+use std::sync::Arc;
+
 use esp_idf_sys as _;
 use log::*;
+use std::sync::Mutex;
+
+mod ble_device_mgr;
+mod light_mgr;
+mod messages;
+mod tasks;
+mod utils;
 
 fn main() {
     // It is necessary to call this function once. Otherwise some patches to the runtime
@@ -21,22 +40,28 @@ fn main() {
         .unwrap();
     }
 
-    let ble_device = BLEDevice::take();
-    let ble_scan = ble_device.get_scan();
+    let device_mgr = Arc::new(Mutex::new(ble_device_mgr::DeviceTracker::new()));
+
+    let (light_controls_chan_tx, light_controls_chan_rx) = smol::channel::bounded(1);
 
     smol::block_on(async {
-        info!("Starting BLE scan");
-        ble_scan
-            .active_scan(true)
-            .interval(100)
-            .window(100)
-            .on_result(|scan_result| {
-                info!("Scan result: {:?}", scan_result);
-            })
-            .start(5000)
-            .await
-            .unwrap();
-        info!("Scan end");
+        info!("Starting BLE scanner task");
+        let ble_scan_task = smol::spawn(tasks::ble_scanner(device_mgr.clone()));
+        let led_animate_task = smol::spawn(tasks::led_animator(
+            device_mgr.clone(),
+            light_controls_chan_rx,
+        ));
+        let ble_decayer_task = smol::spawn(tasks::ble_device_decayer(device_mgr.clone()));
+        let button_monitor_task = smol::spawn(tasks::button_monitor(light_controls_chan_tx));
+
+        futures::future::select_all([
+            ble_scan_task,
+            led_animate_task,
+            ble_decayer_task,
+            button_monitor_task,
+        ])
+        .await;
+        error!("One of the tasks has exited unexpectedly. Exiting...")
     });
 
     info!("END");

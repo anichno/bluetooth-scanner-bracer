@@ -1,0 +1,6 @@
+disallowed-macros = [
+    # Can use a string as the path of the disallowed macro.
+    "std::print",
+    "std::println",
+    "std::todo"
+]

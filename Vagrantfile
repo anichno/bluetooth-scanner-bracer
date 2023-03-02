@@ -19,6 +19,13 @@ Vagrant.configure("2") do |config|
     "--name", "esp32 usb serial",
     "--productid", "ea60",
     "--vendorid", "10c4"]
+
+    # Add filter for ESP32-S3 JTAG
+    vb.customize ["usbfilter", "add", "0",
+    "--target", :id,
+    "--name", "esp32 usb serial",
+    "--productid", "1001",
+    "--vendorid", "303A"]
   end
 
   config.vm.provision "shell", inline: <<-SHELL

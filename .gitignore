@@ -5,3 +5,4 @@
 .embuild/
 /target
 /Cargo.lock
+.env
