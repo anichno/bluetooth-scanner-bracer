@@ -57,21 +57,29 @@ pub async fn ble_scanner(device_mgr: Arc<Mutex<crate::ble_device_mgr::DeviceTrac
 
 #[cfg(feature = "simulator")]
 pub async fn ble_scanner(device_mgr: Arc<Mutex<crate::ble_device_mgr::DeviceTracker>>) {
-    // add fake device
-
     use const_format::concatcp;
-    device_mgr
-        .lock()
-        .unwrap()
-        .update(esp32_nimble::BLEAddress::default(), "", -50);
 
-    // add fake favorite device
-    device_mgr.lock().unwrap().update(
-        esp32_nimble::BLEAddress::new_from_addr([0x11, 0x22, 0x33, 0x44, 0x55, 0x66]),
-        concatcp!(crate::ble_device_mgr::FAVORITE_DEVICE_ID, ":255,0,0"),
-        -50,
-    );
+    let mut first_update = true;
+
     loop {
+        let do_update = device_mgr.lock().unwrap().devices.is_empty();
+        if do_update {
+            if !first_update {
+                smol::Timer::after(std::time::Duration::from_millis(5000)).await;
+            }
+            first_update = false;
+            let mut device_mgr = device_mgr.lock().unwrap();
+            // add fake device
+            device_mgr.update(esp32_nimble::BLEAddress::default(), "", -50);
+
+            // add fake favorite device
+            device_mgr.update(
+                esp32_nimble::BLEAddress::new_from_addr([0x11, 0x22, 0x33, 0x44, 0x55, 0x66]),
+                concatcp!(crate::ble_device_mgr::FAVORITE_DEVICE_ID, ":255,0,0"),
+                -50,
+            );
+        }
+
         smol::Timer::after(std::time::Duration::from_millis(100)).await;
     }
 }
