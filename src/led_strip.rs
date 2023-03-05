@@ -73,6 +73,7 @@ impl<const NUM_LEDS: usize> LedStrip<NUM_LEDS> {
                     carrier_en: false,
                     loop_en: false,
                     idle_output_en: true,
+                    #[cfg(esp32s3)]
                     loop_count: 0,
                 },
             },
@@ -111,6 +112,7 @@ impl<const NUM_LEDS: usize> LedStrip<NUM_LEDS> {
         })
     }
 
+    #[cfg(esp32s3)]
     fn create_rmt_item32(duration0: u32, level0: u32, duration1: u32, level1: u32) -> rmt_item32_t {
         let mut tmp = esp_idf_sys::rmt_item32_t__bindgen_ty_1__bindgen_ty_1::default();
         tmp.set_duration0(duration0);
@@ -120,6 +122,21 @@ impl<const NUM_LEDS: usize> LedStrip<NUM_LEDS> {
 
         esp_idf_sys::rmt_item32_t {
             __bindgen_anon_1: esp_idf_sys::rmt_item32_t__bindgen_ty_1 {
+                __bindgen_anon_1: tmp,
+            },
+        }
+    }
+
+    #[cfg(esp32)]
+    fn create_rmt_item32(duration0: u32, level0: u32, duration1: u32, level1: u32) -> rmt_item32_t {
+        let mut tmp = esp_idf_sys::rmt_item32_s__bindgen_ty_1__bindgen_ty_1::default();
+        tmp.set_duration0(duration0);
+        tmp.set_duration1(duration1);
+        tmp.set_level0(level0);
+        tmp.set_level1(level1);
+
+        esp_idf_sys::rmt_item32_t {
+            __bindgen_anon_1: esp_idf_sys::rmt_item32_s__bindgen_ty_1 {
                 __bindgen_anon_1: tmp,
             },
         }
@@ -138,7 +155,7 @@ impl<const NUM_LEDS: usize> LedStrip<NUM_LEDS> {
     pub fn update(&mut self) -> Result<(), EspError> {
         let mut num = 0;
         for color in self.colors {
-            for byte in [color.r, color.g, color.b] {
+            for byte in [color.g, color.r, color.b] {
                 for i in 0..8 {
                     let bit = byte & (1 << (7 - i));
                     self.raw_data[num] = if bit == 0 { self.bit0 } else { self.bit1 };
