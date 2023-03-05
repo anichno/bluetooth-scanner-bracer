@@ -84,15 +84,16 @@ pub async fn ble_scanner(device_mgr: Arc<Mutex<crate::ble_device_mgr::DeviceTrac
     }
 }
 
-pub async fn led_animator(
+pub fn led_animator(
     device_mgr: Arc<Mutex<crate::ble_device_mgr::DeviceTracker>>,
     light_controls_chan: smol::channel::Receiver<crate::messages::LightControls>,
 ) {
     let mut light_manager =
         crate::light_mgr::LightMgr::new(device_mgr, crate::messages::DisplaySortMode::Ordered);
-    let mut update_timer = smol::Timer::interval(light_manager.get_tick_interval());
+    let interval = light_manager.get_tick_interval();
 
     loop {
+        let start = std::time::Instant::now();
         match light_controls_chan.try_recv() {
             Ok(msg) => {
                 info!("Received control message: {:?}", msg);
@@ -117,7 +118,8 @@ pub async fn led_animator(
             },
         }
         light_manager.tick();
-        update_timer.next().await;
+        let wait_time = interval.saturating_sub(start.elapsed());
+        std::thread::sleep(wait_time);
     }
 }
 
@@ -216,6 +218,6 @@ pub async fn button_monitor(
                 .unwrap();
         }
 
-        smol::Timer::after(std::time::Duration::from_millis(10)).await;
+        smol::Timer::after(std::time::Duration::from_millis(20)).await;
     }
 }

@@ -6,8 +6,7 @@ use std::{
 use const_format::assertcp;
 use esp32_nimble::BLEAddress;
 use log::info;
-use smart_leds::{SmartLedsWrite, RGB8};
-use ws2812_esp32_rmt_driver::{driver::color::LedPixelColorGrb24, LedPixelEsp32Rmt};
+use smart_leds::RGB8;
 
 use crate::{
     ble_device_mgr::{DeviceTracker, SIGNAL_IGNORE_ABOVE_THRESHOLD, SIGNAL_IGNORE_BELOW_THRESHOLD},
@@ -227,7 +226,7 @@ impl FavoriteLightState {
 
 pub struct LightMgr {
     device_manager: Arc<Mutex<DeviceTracker>>,
-    led_strip: LedPixelEsp32Rmt<RGB8, LedPixelColorGrb24>,
+    led_strip: crate::led_strip::LedStrip<NUM_LIGHTS>,
     mode: DisplaySortMode,
     brightness: u8,
 
@@ -237,7 +236,11 @@ pub struct LightMgr {
 
 impl LightMgr {
     pub fn new(device_manager: Arc<Mutex<DeviceTracker>>, initial_mode: DisplaySortMode) -> Self {
-        let led_strip = LedPixelEsp32Rmt::<RGB8, LedPixelColorGrb24>::new(0, 14).unwrap();
+        let led_strip = crate::led_strip::LedStrip::<NUM_LIGHTS>::new(
+            esp_idf_sys::rmt_channel_t_RMT_CHANNEL_0,
+            esp_idf_sys::gpio_num_t_GPIO_NUM_14,
+        )
+        .unwrap();
 
         // TODO load last brightness from flash
         Self {
@@ -341,13 +344,12 @@ impl LightMgr {
 
         // write light strip update
         // TODO: gamma correct
-        self.led_strip
-            .write(
-                next_light_update
-                    .iter()
-                    .map(|avg_pixel| std::convert::Into::<RGB8>::into(avg_pixel.avg())),
-            )
-            .unwrap();
+        for (i, avg_pixel) in next_light_update.iter().enumerate() {
+            let rgb = avg_pixel.avg();
+            self.led_strip.colors[i] =
+                crate::led_strip::Color::new(rgb.color.r, rgb.color.g, rgb.color.b);
+        }
+        self.led_strip.update().unwrap();
 
         // remove devices that are off the strip
         self.displayed_devices.retain(|_, device| {
