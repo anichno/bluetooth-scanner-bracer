@@ -7,10 +7,10 @@ use esp_idf_sys::{
     rmt_config_t__bindgen_ty_1, rmt_item32_t, rmt_mode_t_RMT_MODE_TX, rmt_tx_config_t, ESP_OK,
 };
 
-const WS6812_RGBW_T0H_NS: u32 = 300;
-const WS6812_RGBW_T0L_NS: u32 = 900;
-const WS6812_RGBW_T1H_NS: u32 = 600;
-const WS6812_RGBW_T1L_NS: u32 = 600;
+const WS2812_TO0H_NS: u32 = 400;
+const WS2812_TO0L_NS: u32 = 850;
+const WS2812_TO1H_NS: u32 = 800;
+const WS2812_TO1L_NS: u32 = 450;
 
 #[derive(Copy, Clone)]
 pub struct Color {
@@ -95,10 +95,10 @@ impl<const NUM_LEDS: usize> LedStrip<NUM_LEDS> {
 
         let ratio = counter_clk_hz as f32 / 1e9;
 
-        let zero_high_ticks = (ratio * WS6812_RGBW_T0H_NS as f32) as u32;
-        let zero_low_ticks = (ratio * WS6812_RGBW_T0L_NS as f32) as u32;
-        let one_high_ticks = (ratio * WS6812_RGBW_T1H_NS as f32) as u32;
-        let one_low_ticks = (ratio * WS6812_RGBW_T1L_NS as f32) as u32;
+        let zero_high_ticks = (ratio * WS2812_TO0H_NS as f32) as u32;
+        let zero_low_ticks = (ratio * WS2812_TO0L_NS as f32) as u32;
+        let one_high_ticks = (ratio * WS2812_TO1H_NS as f32) as u32;
+        let one_low_ticks = (ratio * WS2812_TO1L_NS as f32) as u32;
 
         let bit0 = Self::create_rmt_item32(zero_high_ticks, 1, zero_low_ticks, 0);
         let bit1 = Self::create_rmt_item32(one_high_ticks, 1, one_low_ticks, 0);

@@ -33,7 +33,12 @@ const FALL_OFF_RATE: f32 = 0.5;
 const BRIGHTNESS_LEVELS: u8 = 10;
 
 const TRANSITION_SECONDS: u64 = 3;
+#[cfg(esp32)]
+const STEPS_PER_SECOND: u64 = 30;
+
+#[cfg(esp32s3)]
 const STEPS_PER_SECOND: u64 = 120;
+
 const NUM_TRANSITIONAL_STEPS: u64 = TRANSITION_SECONDS * STEPS_PER_SECOND;
 
 #[derive(Debug, Clone, Copy, Default)]
