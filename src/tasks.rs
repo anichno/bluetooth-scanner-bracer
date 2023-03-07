@@ -75,7 +75,7 @@ pub async fn ble_scanner(device_mgr: Arc<Mutex<crate::ble_device_mgr::DeviceTrac
             // add fake favorite device
             device_mgr.update(
                 esp32_nimble::BLEAddress::new_from_addr([0x11, 0x22, 0x33, 0x44, 0x55, 0x66]),
-                concatcp!(crate::ble_device_mgr::FAVORITE_DEVICE_ID, ":255,0,0"),
+                concatcp!(crate::ble_device_mgr::FAVORITE_DEVICE_ID, ":0"),
                 -50,
             );
         }
