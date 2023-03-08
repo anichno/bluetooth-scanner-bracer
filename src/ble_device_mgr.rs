@@ -1,5 +1,4 @@
 use esp32_nimble::BLEAddress;
-use log::info;
 use palette::RgbHue;
 
 /// How many seconds until device signal strength begins to decay
@@ -99,7 +98,6 @@ impl DeviceTracker {
     pub fn decay_tick(&mut self) {
         // update decaying devices and remove devices that are too far away
         let now = std::time::Instant::now();
-        info!("Devices: {:?}", self.devices);
 
         self.devices.retain_mut(|device| {
             // check how long since last seen and start decaying if necessary

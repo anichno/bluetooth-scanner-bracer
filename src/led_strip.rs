@@ -6,6 +6,7 @@ use esp_idf_sys::{
     rmt_carrier_level_t_RMT_CARRIER_LEVEL_LOW, rmt_channel_t, rmt_config_t,
     rmt_config_t__bindgen_ty_1, rmt_item32_t, rmt_mode_t_RMT_MODE_TX, rmt_tx_config_t, ESP_OK,
 };
+use palette::{FromColor, Hsv, Srgb};
 
 const WS2812_TO0H_NS: u32 = 400;
 const WS2812_TO0L_NS: u32 = 850;
@@ -22,6 +23,18 @@ pub struct Color {
 impl Color {
     pub fn new(r: u8, g: u8, b: u8) -> Color {
         Color { r, g, b }
+    }
+}
+
+impl From<Hsv> for Color {
+    fn from(hsv: Hsv) -> Self {
+        let rgb = Srgb::from_color(hsv);
+
+        Color {
+            r: (rgb.red * 255.0) as u8,
+            g: (rgb.green * 255.0) as u8,
+            b: (rgb.blue * 255.0) as u8,
+        }
     }
 }
 

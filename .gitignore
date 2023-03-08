@@ -5,7 +5,8 @@
 .embuild/
 /target
 /Cargo.lock
-.env
+.env.*
+!.env.example
 *.bin
 .vscode/launch.json
 .vscode/settings.json

@@ -34,25 +34,31 @@ pub async fn ble_scanner(device_mgr: Arc<Mutex<crate::ble_device_mgr::DeviceTrac
         .active_scan(true)
         .interval(40)
         .window(30)
-        .filter_duplicates(false);
+        .filter_duplicates(true);
 
-    scanner
-        .on_result(move |scan_result| {
-            info!(
-                "Scan result: {{name: {}, addr: {}, rssi: {}}}",
-                scan_result.name(),
-                scan_result.addr(),
-                scan_result.rssi()
-            );
-            device_mgr.lock().unwrap().update(
-                *scan_result.addr(),
-                scan_result.name(),
-                scan_result.rssi(),
-            );
-        })
-        .start(i32::MAX)
-        .await
-        .unwrap();
+    loop {
+        let device_mgr = device_mgr.clone();
+
+        scanner
+            .on_result(move |scan_result| {
+                #[cfg(feature = "debug")]
+                info!(
+                    "Scan result: {{name: {}, addr: {}, rssi: {}}}",
+                    scan_result.name(),
+                    scan_result.addr(),
+                    scan_result.rssi()
+                );
+                device_mgr.lock().unwrap().update(
+                    *scan_result.addr(),
+                    scan_result.name(),
+                    scan_result.rssi(),
+                );
+            })
+            .start(100)
+            .await
+            .unwrap();
+        scanner.clear_results();
+    }
 }
 
 #[cfg(feature = "simulator")]
@@ -69,8 +75,14 @@ pub async fn ble_scanner(device_mgr: Arc<Mutex<crate::ble_device_mgr::DeviceTrac
             }
             first_update = false;
             let mut device_mgr = device_mgr.lock().unwrap();
-            // add fake device
-            device_mgr.update(esp32_nimble::BLEAddress::default(), "", -50);
+            // add fake devices
+            for i in 0..10 {
+                device_mgr.update(
+                    esp32_nimble::BLEAddress::new_from_addr([i, 0x22, 0x33, 0x44, 0x55, 0x66]),
+                    "",
+                    -50 - i as i32 * 2,
+                );
+            }
 
             // add fake favorite device
             device_mgr.update(

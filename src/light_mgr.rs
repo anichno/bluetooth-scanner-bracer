@@ -6,14 +6,10 @@ use std::{
 use const_format::assertcp;
 use esp32_nimble::BLEAddress;
 use log::info;
-use palette::{FromColor, Hsv, Mix, RgbHue, Srgb};
-use rand::Rng;
+use palette::{Blend, FromColor, Hsv, RgbHue, Srgb};
+use rand::seq::SliceRandom;
 
-use crate::{
-    ble_device_mgr::{DeviceTracker, SIGNAL_IGNORE_ABOVE_THRESHOLD, SIGNAL_IGNORE_BELOW_THRESHOLD},
-    messages::DisplaySortMode,
-    utils,
-};
+use crate::{ble_device_mgr::DeviceTracker, messages::DisplaySortMode, utils};
 
 const NUM_LIGHTS: usize = 60;
 pub const MAX_DEVICES_SHOWN: usize = 10;
@@ -44,33 +40,74 @@ const NUM_TRANSITIONAL_STEPS: u64 = TRANSITION_SECONDS * STEPS_PER_SECOND;
 
 #[derive(Debug, Copy, Clone, Default)]
 struct AvgPixel {
-    // colors: tinyvec::TinyVec<[Hsv; MAX_DEVICES_SHOWN * 2]>,
     color: Option<Hsv>,
-    // num_samples: usize,
 }
 
 impl AvgPixel {
     fn add(&mut self, pixel: Hsv) {
-        // self.color += pixel; // TODO: check that this is correct
-        // self.colors.push(pixel);
-        // self.num_samples += 1;
         if let Some(color) = self.color {
-            self.color = Some(color.mix(&pixel, 0.5));
+            // apply the screen blend mode to the new pixel
+            let srgb1 = Srgb::from_color(color).into_linear();
+            let srgb2 = Srgb::from_color(pixel).into_linear();
+            let blended = Srgb::from_linear(srgb1.screen(srgb2));
+            self.color = Some(Hsv::from_color(blended));
         } else {
             self.color = Some(pixel);
         }
     }
 
     fn avg(&self) -> Hsv {
-        // // TODO this probably needs improvement
-        // if self.colors.len() == 0 {
-        //     Hsv::default()
-        // } else {
-        //     self.colors
-        //         .iter()
-        //         .fold(Hsv::default(), |sum, color| sum.mix(color, 0.5))
-        // }
         self.color.unwrap_or_default()
+    }
+}
+
+struct ColorAllocator {
+    colors: [RgbHue; MAX_DEVICES_SHOWN * 2],
+    colors_in_use: [u8; MAX_DEVICES_SHOWN * 2],
+}
+
+impl ColorAllocator {
+    fn new() -> Self {
+        let mut colors = [RgbHue::default(); MAX_DEVICES_SHOWN * 2];
+        for (i, color) in colors.iter_mut().enumerate() {
+            *color = RgbHue::from_degrees(360.0 / (MAX_DEVICES_SHOWN * 2) as f32 * i as f32);
+        }
+        Self {
+            colors,
+            colors_in_use: [0; MAX_DEVICES_SHOWN * 2],
+        }
+    }
+
+    fn allocate_color(&mut self) -> RgbHue {
+        let mut available_colors = tinyvec::tiny_vec!([usize; MAX_DEVICES_SHOWN * 2]);
+
+        let mut in_use = 0;
+        loop {
+            for (i, color_in_use) in self.colors_in_use.iter().enumerate() {
+                if *color_in_use == in_use {
+                    available_colors.push(i);
+                }
+            }
+
+            if !available_colors.is_empty() {
+                break;
+            } else {
+                in_use += 1;
+            }
+        }
+
+        let color_idx = *available_colors.choose(&mut rand::thread_rng()).unwrap();
+        self.colors_in_use[color_idx] += 1;
+        self.colors[color_idx]
+    }
+
+    fn release_color(&mut self, color: RgbHue) {
+        let color_idx = self
+            .colors
+            .iter()
+            .position(|c| *c == color)
+            .expect("color not found");
+        self.colors_in_use[color_idx] = self.colors_in_use[color_idx].saturating_sub(1);
     }
 }
 
@@ -90,9 +127,9 @@ impl DeviceLightState {
         utils::num_linear_conversion(
             slot_progress,
             0.0,
-            MAX_DEVICES_SHOWN as f32,
-            FAVORITE_RESERVE_LIGHTS as f32 + SLOT_WIDTH as f32 / 2.0,
-            NUM_LIGHTS as f32 - SLOT_WIDTH as f32 / 2.0,
+            MAX_DEVICES_SHOWN as f32 - 1.0,
+            (FAVORITE_RESERVE_LIGHTS as f32 + SLOT_WIDTH as f32 / 2.0).floor(),
+            NUM_LIGHTS as f32 - (SLOT_WIDTH as f32 / 2.0).ceil(),
         )
     }
 
@@ -151,7 +188,7 @@ impl DeviceLightState {
         }
 
         // update state
-        self.steps_remaining -= 1;
+        self.steps_remaining = self.steps_remaining.saturating_sub(1);
         if self.steps_remaining == 0 {
             self.current_rank_slot = self.target_rank_slot;
         }
@@ -167,25 +204,31 @@ impl FavoriteLightState {
     fn tick(&self, brightness: f32, light_strip: &mut [AvgPixel; NUM_LIGHTS]) {
         let signal_strength = utils::num_linear_conversion(
             self.rssi as f32,
-            SIGNAL_IGNORE_BELOW_THRESHOLD as f32,
-            SIGNAL_IGNORE_ABOVE_THRESHOLD as f32,
+            -70.0, // less tolerant, so that as the other device hits the noise floor, we don't flicker in and out
+            -55.0, // A bit more tolerant since our transmit power is low
             0.0,
             1.0,
         );
-        let middle_idx = (FAVORITE_RESERVE_LIGHTS - 1) as f32 / 2.0;
+        let middle_idx = FAVORITE_RESERVE_LIGHTS / 2;
+        let signal_width =
+            ((FAVORITE_RESERVE_LIGHTS - 1) as f32 * signal_strength).round() as usize;
+        if signal_width > 0 {
+            light_strip[middle_idx].add(Hsv::new(self.color, 1.0, brightness));
 
-        for (i, pixel) in light_strip
-            .iter_mut()
-            .enumerate()
-            .take(FAVORITE_RESERVE_LIGHTS)
-        {
-            let signal_bias = 1.0 - (i as f32 - middle_idx).abs() / middle_idx;
-
-            pixel.add(Hsv::new(
-                self.color,
-                1.0,
-                brightness * signal_bias * signal_strength,
-            ));
+            let mut last_low_idx = middle_idx;
+            let mut last_high_idx = middle_idx;
+            let mut last_low = false;
+            for _ in 1..=signal_width {
+                if !last_low {
+                    last_low_idx = last_low_idx.saturating_sub(1);
+                    light_strip[last_low_idx].add(Hsv::new(self.color, 1.0, brightness));
+                    last_low = true;
+                } else {
+                    last_high_idx = last_high_idx.saturating_add(1);
+                    light_strip[last_high_idx].add(Hsv::new(self.color, 1.0, brightness));
+                    last_low = false;
+                }
+            }
         }
     }
 }
@@ -195,6 +238,7 @@ pub struct LightMgr {
     led_strip: crate::led_strip::LedStrip<NUM_LIGHTS>,
     mode: DisplaySortMode,
     brightness: f32, // maybe custom type to enforce 0.0-1.0
+    color_allocator: ColorAllocator,
 
     displayed_devices: HashMap<BLEAddress, DeviceLightState>,
     favorite_device: Option<FavoriteLightState>,
@@ -213,7 +257,8 @@ impl LightMgr {
             device_manager,
             led_strip,
             mode: initial_mode,
-            brightness: 0.5,
+            brightness: 0.1,
+            color_allocator: ColorAllocator::new(),
             displayed_devices: HashMap::new(),
             favorite_device: None,
         }
@@ -279,11 +324,9 @@ impl LightMgr {
             } else if i < MAX_DEVICES_SHOWN {
                 info!("new device: addr: {}, signal: {}", address, rssi);
                 // only insert new devices if there is room
-                let rand_color = RgbHue::from_degrees(rand::thread_rng().gen_range(0..360) as f32);
-
                 let new_device = DeviceLightState {
                     rssi,
-                    color: rand_color,
+                    color: self.color_allocator.allocate_color(),
                     current_rank_slot: MAX_DEVICES_SHOWN + 1,
                     target_rank_slot: i,
                     steps_remaining: NUM_TRANSITIONAL_STEPS,
@@ -319,8 +362,14 @@ impl LightMgr {
 
         // remove devices that are off the strip
         self.displayed_devices.retain(|_, device| {
-            device.current_rank_slot <= MAX_DEVICES_SHOWN
-                || device.target_rank_slot <= MAX_DEVICES_SHOWN
+            if device.current_rank_slot > MAX_DEVICES_SHOWN
+                && device.target_rank_slot > MAX_DEVICES_SHOWN
+            {
+                self.color_allocator.release_color(device.color);
+                false
+            } else {
+                true
+            }
         });
     }
 

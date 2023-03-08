@@ -15,6 +15,7 @@ opt-level = "z"
 [features]
 pio = ["esp-idf-sys/pio"]
 simulator = []
+debug = []
 
 [patch.crates-io]
 smol = { git = "https://github.com/esp-rs-compat/smol" }
