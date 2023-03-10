@@ -8,7 +8,7 @@ use log::*;
 use smol::stream::StreamExt;
 use std::sync::Mutex;
 
-const DEBOUNCE_TIME_MS: u64 = 50;
+const DEBOUNCE_TIME_MS: u64 = 5;
 
 #[cfg(not(feature = "simulator"))]
 pub async fn ble_scanner(device_mgr: Arc<Mutex<crate::ble_device_mgr::DeviceTracker>>) {
@@ -149,9 +149,13 @@ pub async fn ble_device_decayer(device_mgr: Arc<Mutex<crate::ble_device_mgr::Dev
 pub async fn button_monitor(
     light_controls_chan: smol::channel::Sender<crate::messages::LightControls>,
 ) {
-    async fn debounce_input<T: esp_idf_hal::gpio::Pin, MODE: esp_idf_hal::gpio::InputMode>(
+    async fn wait_stable_low<T: esp_idf_hal::gpio::Pin, MODE: esp_idf_hal::gpio::InputMode>(
         pin: PinDriver<'_, T, MODE>,
     ) -> PinDriver<'_, T, MODE> {
+        smol::Timer::after(std::time::Duration::from_millis(DEBOUNCE_TIME_MS)).await;
+        while pin.is_high() {
+            smol::Timer::after(std::time::Duration::from_millis(10)).await;
+        }
         let mut last_state = pin.is_high();
         let mut last_state_change =
             smol::Timer::after(std::time::Duration::from_millis(DEBOUNCE_TIME_MS)).await;
@@ -198,16 +202,17 @@ pub async fn button_monitor(
     loop {
         // Read one button per loop
         if btn_brightness_increase.is_high() {
-            btn_brightness_increase = debounce_input(btn_brightness_increase).await;
             light_controls_chan
                 .send(crate::messages::LightControls::BrightnessIncrease)
                 .await
                 .unwrap();
+            btn_brightness_increase = wait_stable_low(btn_brightness_increase).await;
         } else if btn_brightness_decrease.is_high() {
             light_controls_chan
                 .send(crate::messages::LightControls::BrightnessDecrease)
                 .await
                 .unwrap();
+            btn_brightness_decrease = wait_stable_low(btn_brightness_decrease).await;
         } else if switch_display_mode.is_high()
             && matches!(switch_display_last_position, SwitchPosition::Left)
         {

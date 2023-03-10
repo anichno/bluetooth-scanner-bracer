@@ -27,7 +27,8 @@ assertcp!(SLOT_WIDTH % 2 == 1);
 /// As you move away from the center light, what is the brightness of each subsequent light
 const FALL_OFF_RATE: f32 = 0.5;
 
-const BRIGHTNESS_LEVELS: f32 = 10.0;
+const BRIGHTNESS_LEVELS: u8 = 10;
+const DEFAULT_BRIGHTNESS: u8 = 3;
 
 const TRANSITION_SECONDS: u64 = 3;
 #[cfg(esp32)]
@@ -237,7 +238,8 @@ pub struct LightMgr {
     device_manager: Arc<Mutex<DeviceTracker>>,
     led_strip: crate::led_strip::LedStrip<NUM_LIGHTS>,
     mode: DisplaySortMode,
-    brightness: f32, // maybe custom type to enforce 0.0-1.0
+    brightness: f32,
+    brightness_level: u8,
     color_allocator: ColorAllocator,
 
     displayed_devices: HashMap<BLEAddress, DeviceLightState>,
@@ -252,12 +254,12 @@ impl LightMgr {
         )
         .unwrap();
 
-        // TODO load last brightness from flash
         Self {
             device_manager,
             led_strip,
             mode: initial_mode,
-            brightness: 0.1,
+            brightness: Self::get_brightness(DEFAULT_BRIGHTNESS),
+            brightness_level: DEFAULT_BRIGHTNESS,
             color_allocator: ColorAllocator::new(),
             displayed_devices: HashMap::new(),
             favorite_device: None,
@@ -373,12 +375,20 @@ impl LightMgr {
         });
     }
 
+    fn get_brightness(level: u8) -> f32 {
+        0.714_f32.powf((BRIGHTNESS_LEVELS - level) as f32)
+    }
+
     pub fn increase_brightness(&mut self) {
-        self.brightness = (self.brightness + (1.0 / BRIGHTNESS_LEVELS)).min(1.0);
+        self.brightness_level = (self.brightness_level + 1).min(BRIGHTNESS_LEVELS);
+        info!("Brightness increased to level: {}", self.brightness_level);
+        self.brightness = Self::get_brightness(self.brightness_level);
     }
 
     pub fn decrease_brightness(&mut self) {
-        self.brightness = (self.brightness - (1.0 / BRIGHTNESS_LEVELS)).max(0.0);
+        self.brightness_level = (self.brightness_level - 1).max(1);
+        info!("Brightness decreased to level: {}", self.brightness_level);
+        self.brightness = Self::get_brightness(self.brightness_level);
     }
 
     pub fn switch_mode(&mut self, new_mode: DisplaySortMode) {
