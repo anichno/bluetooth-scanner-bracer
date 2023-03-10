@@ -1,5 +1,5 @@
 use esp32_nimble::BLEAddress;
-use log::info;
+use palette::RgbHue;
 
 /// How many seconds until device signal strength begins to decay
 const DECAY_DELAY: u64 = 5;
@@ -22,11 +22,11 @@ const SIGNAL_MOVING_AVG_WINDOW: usize = 5;
 pub const FAVORITE_DEVICE_ID: &str = env!("FAVORITE_DEVICE_ID");
 
 // type BLEAddressStr = String;
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Device {
     pub address: BLEAddress,
     pub is_favorite: bool,
-    pub favorite_color: Option<[u8; 3]>,
+    pub favorite_color: Option<RgbHue>,
     pub signal_strength: crate::utils::MovingAvg<SIGNAL_MOVING_AVG_WINDOW>,
     last_seen: std::time::Instant,
 
@@ -66,12 +66,14 @@ impl DeviceTracker {
 
             // lookup color for device
             let favorite_color = if is_favorite {
-                // parse color from name (e.g. "FAVORITE_DEVICE_ID:255,255,255")
-                let color_str = name.split(':').nth(1).unwrap();
-                let mut color = [0u8; 3];
-                for (i, val) in color_str.split(',').enumerate() {
-                    color[i] = val.parse().unwrap();
-                }
+                // parse color from name (e.g. "FAVORITE_DEVICE_ID:255")
+                let color = name
+                    .split(':')
+                    .nth(1)
+                    .unwrap()
+                    .parse::<f32>()
+                    .unwrap()
+                    .into();
                 Some(color)
             } else {
                 None
@@ -96,7 +98,6 @@ impl DeviceTracker {
     pub fn decay_tick(&mut self) {
         // update decaying devices and remove devices that are too far away
         let now = std::time::Instant::now();
-        info!("Devices: {:?}", self.devices);
 
         self.devices.retain_mut(|device| {
             // check how long since last seen and start decaying if necessary
