@@ -1,0 +1,6 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Espressif")(type "KiCad")(uri "${KIPRJMOD}/libraries/Espressif.kicad_sym")(options "")(descr ""))
+  (lib (name "74AHCT125N")(type "KiCad")(uri "${KIPRJMOD}/libraries/74AHCT125N.kicad_sym")(options "")(descr ""))
+  (lib (name "project")(type "KiCad")(uri "${KIPRJMOD}/libraries/project.kicad_sym")(options "")(descr ""))
+)
