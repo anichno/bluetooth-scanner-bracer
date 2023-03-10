@@ -1,6 +1,6 @@
 [package]
 name = "bluetooth-scanner-bracer"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Anthony Canino"]
 edition = "2021"
 resolver = "2"
